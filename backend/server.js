@@ -14,9 +14,16 @@ require('./models/associations'); // Load associations (ensure all models are as
 
 // Initializing Express App
 const app = express();
+const cors = require("cors");
 
 // Middleware
 app.use(bodyParser.json());
+app.use(cors({
+    origin: "http://localhost:3001", // Replace with your frontend URL
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
 
 // Connect to MySQL Database
 connectDB();

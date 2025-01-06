@@ -7,18 +7,29 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
-    e.preventDefault();
+const handleLogin = async () => {
+    try {
+        const response = await fetch("http://localhost:3000/auth/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email, password }),
+        });
 
-    // Mock API login simulation
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (storedUser && storedUser.email === email && storedUser.password === password) {
-      alert("Login successful!");
-      navigate("/");
-    } else {
-      setError("Invalid email or password.");
+        const data = await response.json();
+
+        if (response.ok) {
+            alert("Login successful!");
+            console.log("JWT Token:", data.token);
+        } else {
+            alert(data.error);
+        }
+    } catch (err) {
+        console.error("Error:", err);
+        alert("Something went wrong. Please try again.");
     }
-  };
+};
 
   return (
     <div className="flex justify-center items-center h-screen">
