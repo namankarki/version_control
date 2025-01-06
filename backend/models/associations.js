@@ -15,7 +15,7 @@ Folder.belongsTo(Folder, { as: 'parentFolder', foreignKey: 'parentId' });
 Folder.belongsTo(Commit);
 Folder.hasMany(File, { as: 'files' });
 Commit.hasMany(Folder, { as: 'folders' });
-File.belongsTo(Folder);
+File.belongsTo(Folder, {as: "Folder"});
 Commit.belongsTo(Branch);
 
 console.log('Associations initialized successfully.');

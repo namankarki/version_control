@@ -98,48 +98,81 @@ const createCommit = async (req, res) => {
     }
 };
 
-const getCommit = async (req, res) => {
+const getCommitDetails = async (req, res) => {
     try {
-        const { commitId } = req.params;
-        const userId = req.user.id;
+        console.log('Request Params:', req.params);
 
-        // Find the commit with associated folders and files
+        const { id: commitId } = req.params;
+        const userId = req.user.id; // Assuming the user is authenticated and userId is available
+
+        if (!commitId) {
+            return res.status(400).json({ error: 'Commit ID is required' });
+        }
+
+        // Retrieve the commit and ensure it belongs to the authenticated user
         const commit = await Commit.findOne({
             where: { id: commitId },
-            include: [
-                {
-                    model: Branch,
-                    include: {
-                        model: Repository,
-                        where: { UserId: userId }, // Ensure repository belongs to the user
-                    },
+            include: {
+                model: Branch,
+                include: {
+                    model: Repository,
+                    where: { UserId: userId }, // Ensure the repository belongs to the user
                 },
-                {
-                    model: Folder,
-                    as: 'folders', // Alias for Folder model
-                    include: [
-                        {
-                            model: File,
-                            as: 'files', // Alias for File model
-                        },
-                        {
-                            model: Folder, // Include parent folder
-                            as: 'parentFolder', // Alias for parent folder
-                        },
-                    ],
-                },
-            ],
+            },
         });
 
         if (!commit) {
             return res.status(404).json({ error: 'Commit not found or access denied' });
         }
 
-        res.status(200).json({ commit });
+        // Fetch folder structure for the commit
+        const folderStructure = await getFolderStructure(commitId);
+
+        res.status(200).json({
+            message: 'Commit retrieved successfully',
+            commit: {
+                id: commit.id,
+                message: commit.message,
+                createdAt: commit.createdAt,
+                folderStructure,
+            },
+        });
     } catch (error) {
-        console.error('Error fetching commit:', error.stack);
-        res.status(500).json({ error: 'Failed to fetch commit' });
+        console.error('Error retrieving commit details:', error.stack);
+        res.status(500).json({ error: 'Failed to retrieve commit details' });
     }
 };
 
-module.exports = { createCommit, getCommit };
+// Helper function to fetch folder structure
+const getFolderStructure = async (commitId) => {
+    // Find all folders associated with the commit
+    const folders = await Folder.findAll({
+        where: { CommitId: commitId },
+        include: [
+            {
+                model: File,
+                as: 'files', // Alias for File relationship
+            },
+        ],
+    });
+
+    // Map each folder with its files
+    const folderStructure = folders.map((folder) => ({
+        id: folder.id,
+        name: folder.name,
+        path: folder.path,
+        files: folder.files.map((file) => ({
+            id: file.id,
+            name: file.name,
+            type: file.type,
+            path: file.path,
+        })),
+    }));
+
+    return folderStructure;
+};
+
+
+
+
+module.exports = { createCommit,getCommitDetails};
