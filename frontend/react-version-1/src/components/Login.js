@@ -7,29 +7,37 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-const handleLogin = async () => {
+  const handleLogin = async (e) => {
+    e.preventDefault(); // Prevent form submission from reloading the page
+
     try {
-        const response = await fetch("http://localhost:3000/auth/login", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ email, password }),
-        });
+      const response = await fetch("http://localhost:3000/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (response.ok) {
-            alert("Login successful!");
-            console.log("JWT Token:", data.token);
-        } else {
-            alert(data.error);
-        }
+      if (response.ok) {
+        alert("Login successful!");
+        console.log("JWT Token:", data.token);
+
+        // Save the token (if needed)
+        localStorage.setItem("token", data.token);
+
+        // Redirect to the Home page
+        navigate("/dashboard"); 
+      } else {
+        setError(data.error);
+      }
     } catch (err) {
-        console.error("Error:", err);
-        alert("Something went wrong. Please try again.");
+      console.error("Error:", err);
+      setError("Something went wrong. Please try again.");
     }
-};
+  };
 
   return (
     <div className="flex justify-center items-center h-screen">
@@ -43,6 +51,7 @@ const handleLogin = async () => {
             className="w-full p-2 border border-gray-300 rounded"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            required
           />
         </div>
         <div className="mb-6">
@@ -52,6 +61,7 @@ const handleLogin = async () => {
             className="w-full p-2 border border-gray-300 rounded"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
           />
         </div>
         <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded">

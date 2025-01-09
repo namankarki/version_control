@@ -1,6 +1,7 @@
 // Importing Dependencies
 const express = require('express');
 const bodyParser = require('body-parser');
+const path = require("path");
 const bcrypt = require('bcrypt');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
@@ -24,6 +25,8 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
+// Serve Static Files
+app.use("/uploads", express.static(path.join(__dirname, "./middlewares/uploads")));
 
 // Connect to MySQL Database
 connectDB();

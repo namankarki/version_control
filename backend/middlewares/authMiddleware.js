@@ -1,29 +1,41 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User'); // Sequelize model
+const jwt = require("jsonwebtoken");
+const User = require("../models/User"); // Sequelize model
 
 const authenticateUser = async (req, res, next) => {
-    const token = req.headers['authorization']?.split(' ')[1]; // Extract Bearer token
-    if (!token) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
-
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET); // Verify token
-
-        // Fetch user details from MySQL using Sequelize
-        const user = await User.findOne({ where: { id: decoded.id } });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+        // Extract the token from the Authorization header
+        const token = req.headers.authorization?.split(" ")[1];
+        if (!token) {
+            return res.status(401).json({ error: "Unauthorized. Token is required." });
         }
 
-        req.user = user; // Attach user to request object
+        // Verify the JWT token
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        // Fetch user details from the database using the decoded ID
+        const user = await User.findByPk(decoded.id, {
+            attributes: ["id", "username", "email", "photo", "age", "description"],
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found." });
+        }
+
+        // Attach the user to the request object for downstream usage
+        req.user = user;
+
+        // Proceed to the next middleware or route handler
         next();
     } catch (err) {
-        if (err.name === 'TokenExpiredError') {
-            return res.status(401).json({ error: 'Token expired' });
+        console.error("Error in authentication middleware:", err.message);
+
+        // Handle token expiration errors specifically
+        if (err.name === "TokenExpiredError") {
+            return res.status(401).json({ error: "Token expired. Please log in again." });
         }
-        console.error(err.message);
-        res.status(401).json({ error: 'Invalid token' });
+
+        // Handle other token-related errors
+        res.status(401).json({ error: "Invalid token. Please log in again." });
     }
 };
 
