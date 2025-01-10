@@ -7,7 +7,8 @@ const Repository= require('../models/Repository');
 
 const register = async (req, res) => {
     try {
-        const { username, email, password, photo, age, description } = req.body;
+        const { username, email, password, age, description } = req.body;
+        const photo = req.file ? req.file.filename : null; // Get the uploaded photo filename
 
         // Validate input
         if (!username || !email || !password) {
@@ -39,10 +40,11 @@ const register = async (req, res) => {
 
         res.status(201).json({ message: "User registered successfully", user });
     } catch (error) {
-        console.error(error.message);
+        console.error("Error in register:", error.message);
         res.status(500).json({ error: "Server error" });
     }
 };
+
 
 
 
@@ -127,9 +129,52 @@ const logout = async (req, res) => {
     }
 };
 
+
+const editUserDetails = async (req, res) => {
+    try {
+        const userId = req.user.id; // Assuming authentication middleware sets req.user
+        const { username, email, age, description } = req.body;
+        const photo = req.file ? req.file.filename : null; // Handle photo if uploaded
+
+        // Validate input (e.g., non-negative age)
+        if (age && (isNaN(age) || age < 0)) {
+            return res.status(400).json({ error: "Age must be a non-negative number" });
+        }
+
+        // Fetch user from the database
+        const user = await User.findByPk(userId);
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Update user details
+        user.username = username || user.username; // Only update if provided
+        user.email = email || user.email;
+        user.age = age || user.age;
+        user.description = description || user.description;
+
+        // Update photo only if a new file is uploaded
+        if (photo) {
+            user.photo = photo;
+        }
+
+        // Save updated user details to the database
+        await user.save();
+
+        res.status(200).json({ message: "User details updated successfully", user });
+    } catch (error) {
+        console.error("Error updating user details:", error.message);
+        res.status(500).json({ error: "Server error" });
+    }
+};
+
+
+
 module.exports = {
     register,
     login,
     logout,
-    getUserDetails
+    getUserDetails,
+    editUserDetails
 };

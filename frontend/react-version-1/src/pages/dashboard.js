@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true); // Loading state
+  const [loading, setLoading] = useState(true);
+  const [newRepo, setNewRepo] = useState("");
   const navigate = useNavigate();
 
   // Fetch user details on component mount
@@ -14,14 +15,14 @@ const Dashboard = () => {
         const response = await fetch("http://localhost:3000/auth/getUser", {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`, // Pass token for authentication
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
 
         const data = await response.json();
 
         if (response.ok) {
-          setUser(data); // Set user and repositories
+          setUser({ ...data, repositories: data.repositories || [] });
         } else {
           setError(data.error || "Failed to fetch user details");
         }
@@ -29,7 +30,7 @@ const Dashboard = () => {
         console.error("Error fetching user details:", err);
         setError("Server error. Please try again.");
       } finally {
-        setLoading(false); // Stop loading state
+        setLoading(false);
       }
     };
 
@@ -46,10 +47,10 @@ const Dashboard = () => {
         },
       });
 
-      localStorage.removeItem("token"); // Remove token from localStorage regardless of response
+      localStorage.removeItem("token");
 
       if (response.ok) {
-        navigate("/login"); // Redirect to login page
+        navigate("/login");
       } else {
         setError("Failed to log out. Please try again.");
       }
@@ -59,7 +60,46 @@ const Dashboard = () => {
     }
   };
 
-  // Render loading state or error
+  // Create a repository
+  const handleCreateRepository = async () => {
+    if (!newRepo.trim()) {
+      alert("Repository name cannot be empty.");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:3000/repo/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ name: newRepo }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("Repository created successfully!");
+        setUser((prev) => ({
+          ...prev,
+          repositories: [...prev.repositories, data.repo],
+        }));
+        setNewRepo("");
+      } else {
+        alert(data.error || "Failed to create repository.");
+      }
+    } catch (err) {
+      console.error("Error creating repository:", err);
+      alert("Server error. Please try again.");
+    }
+  };
+
+  // Navigate to the Commit Page with repository ID
+  const handleRepositoryClick = (repoId) => {
+    navigate(`/repositories/${repoId}/commits`);
+  };
+
   if (loading) return <p>Loading...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
 
@@ -114,10 +154,31 @@ const Dashboard = () => {
         {/* Repository Section */}
         <section id="repositories" className="mb-6">
           <h1 className="text-2xl font-bold mb-4">Repositories</h1>
+          {/* Create Repository */}
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="New repository name"
+              value={newRepo}
+              onChange={(e) => setNewRepo(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded mb-2"
+            />
+            <button
+              onClick={handleCreateRepository}
+              className="bg-blue-500 text-white px-4 py-2 rounded"
+            >
+              Create Repository
+            </button>
+          </div>
+          {/* List Repositories */}
           {user?.repositories && user.repositories.length > 0 ? (
             <ul className="space-y-2">
               {user.repositories.map((repo) => (
-                <li key={repo.id} className="p-4 bg-white rounded shadow">
+                <li
+                  key={repo.id}
+                  className="p-4 bg-white rounded shadow cursor-pointer"
+                  onClick={() => handleRepositoryClick(repo.id)}
+                >
                   {repo.name}
                 </li>
               ))}
